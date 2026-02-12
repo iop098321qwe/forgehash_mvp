@@ -254,6 +254,10 @@ repository.
 - Use `addLogMessage()` for new log entries to maintain ordering and
   size limits.
 - Keep code ASCII-only and avoid external assets or libraries.
+- Keep the UI in Catppuccin Mocha; `styles.css` defines the full palette
+  in `:root` and UI colors must use those variables.
+- Prefer semantic color aliases (`--color-*`) over direct palette values
+  when styling new components.
 
 ## Security and Compliance
 
