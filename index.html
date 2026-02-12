@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>ForgeHash MVP</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <div id="start-screen" class="screen">
+      <div class="start-card panel">
+        <h1>ForgeHash MVP</h1>
+        <div id="start-message" class="muted">
+          Ready to boot the rig. Start mining to begin.
+        </div>
+        <div class="start-grid">
+          <div>
+            <div class="start-title">How to play</div>
+            <ul class="start-list">
+              <li>Start mining to generate HashDust over time.</li>
+              <li>Sell HashDust to earn Cash for upgrades.</li>
+              <li>Upgrade CPU/GPU to increase H/s.</li>
+              <li>Reforge to gain permanent Blueprint bonuses.</li>
+            </ul>
+          </div>
+          <div>
+            <div class="start-title">Controls</div>
+            <ul class="start-list">
+              <li>Press P to toggle the pause menu.</li>
+              <li>Use Pause to Restart or End a run.</li>
+            </ul>
+          </div>
+        </div>
+        <div class="button-stack start-actions">
+          <button id="start-btn" class="primary">Start Mining</button>
+        </div>
+        <div class="muted">
+          Starter stash includes a tiny reserve for a fast first upgrade.
+        </div>
+      </div>
+    </div>
+
+    <div id="game-shell" class="app-shell hidden">
+      <header class="game-header">
+        <div>
+          <h1>ForgeHash MVP</h1>
+          <div class="muted">
+            Mine HashDust, sell for Cash, upgrade your rig, and reforge.
+          </div>
+        </div>
+        <div class="header-hint muted">Press P to pause</div>
+      </header>
+
+      <div id="layout">
+        <section class="panel" id="stats-panel">
+          <h2>Stats</h2>
+          <div class="stat-row primary">
+            <span>HashDust</span>
+            <span id="hashdust-value">0</span>
+          </div>
+          <div class="stat-row primary">
+            <span>Cash</span>
+            <span id="cash-value">0</span>
+          </div>
+          <div class="stat-row">
+            <span>HashDust per second</span>
+            <span id="hashrate-value">0 H/s</span>
+          </div>
+          <div class="stat-row">
+            <span>Session</span>
+            <span id="session-status">Ready</span>
+          </div>
+          <div class="stat-row">
+            <span>Mining status</span>
+            <span id="mining-status">Inactive</span>
+          </div>
+          <div class="stat-row">
+            <span>Manual boost</span>
+            <span id="boost-status">Inactive</span>
+          </div>
+        </section>
+
+        <section class="panel" id="actions-panel">
+          <h2>Actions</h2>
+          <div class="button-stack">
+            <button id="pause-btn">Pause (P)</button>
+            <button id="sell-btn">Sell All HashDust</button>
+            <button id="boost-btn">Manual Boost (2x for 5s)</button>
+          </div>
+          <div class="muted">
+            Sell converts all HashDust into Cash. Boost stacks with all
+            modifiers.
+          </div>
+        </section>
+
+        <section class="panel" id="upgrades-panel">
+          <h2>Upgrades</h2>
+          <div id="upgrades-list"></div>
+        </section>
+
+        <section class="panel" id="prestige-panel">
+          <h2>Prestige</h2>
+          <div class="stat-row">
+            <span>Blueprint Points</span>
+            <span id="blueprint-points">0</span>
+          </div>
+          <div class="stat-row">
+            <span>Permanent bonus</span>
+            <span id="prestige-bonus">+0%</span>
+          </div>
+          <div class="stat-row">
+            <span>Lifetime Cash</span>
+            <span id="lifetime-cash">0</span>
+          </div>
+          <button id="reforge-btn">Reforge</button>
+        </section>
+
+        <section class="panel" id="log-panel">
+          <h2>Log</h2>
+          <div id="log-entries" class="muted">No crashes yet.</div>
+        </section>
+      </div>
+    </div>
+
+    <div id="pause-overlay" class="hidden" aria-hidden="true">
+      <div id="pause-menu" class="panel">
+        <h2>Pause Menu</h2>
+        <div class="button-stack">
+          <button id="resume-btn">Resume</button>
+          <button id="restart-btn">Restart</button>
+          <button id="end-btn">End</button>
+        </div>
+        <div class="muted">
+          Restart wipes progress and starts immediately. End wipes and
+          returns to Start.
+        </div>
+      </div>
+    </div>
+
+    <script src="game.js" defer></script>
+  </body>
+</html>
