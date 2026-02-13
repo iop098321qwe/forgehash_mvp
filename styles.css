@@ -129,6 +129,230 @@ h2 {
   letter-spacing: 0.06em;
 }
 
+.rig {
+  --overclock-intensity: 0;
+  --hashflow-intensity: 0;
+  display: grid;
+  gap: 12px;
+}
+
+.rack {
+  display: grid;
+  gap: 10px;
+  padding: 10px;
+  border-radius: 8px;
+  background: var(--color-bg-alt);
+  border: 1px solid var(--color-border);
+}
+
+.rack-shelf {
+  display: grid;
+  gap: 10px;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+}
+
+.module {
+  border: 1px solid var(--color-border);
+  background: var(--color-panel);
+  border-radius: 6px;
+  padding: 8px;
+  display: grid;
+  gap: 6px;
+}
+
+.module-header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.module-title {
+  font-size: 0.75em;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--color-muted);
+}
+
+.module-level {
+  font-size: 0.85em;
+  color: var(--color-text);
+}
+
+.module-body {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 8px;
+  align-items: center;
+}
+
+.module-icon {
+  display: grid;
+  place-items: center;
+  width: 48px;
+  height: 36px;
+  border-radius: 6px;
+  border: 1px solid var(--color-border-strong);
+  background: var(--mocha-surface1);
+}
+
+.cpu-icon {
+  grid-template-columns: repeat(2, 1fr);
+  gap: 4px;
+  padding: 6px;
+}
+
+.cpu-core {
+  width: 10px;
+  height: 10px;
+  border-radius: 2px;
+  background: var(--mocha-overlay1);
+  border: 1px solid var(--mocha-surface2);
+}
+
+.gpu-icon {
+  grid-template-columns: repeat(2, 1fr);
+  gap: 4px;
+  padding: 6px;
+}
+
+.gpu-fan {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  border: 2px solid var(--mocha-overlay2);
+  box-shadow: 0 0 4px var(--mocha-surface2);
+}
+
+.cooling-icon {
+  grid-template-columns: repeat(5, 1fr);
+  gap: 2px;
+  padding: 6px;
+}
+
+.cooling-fin {
+  width: 4px;
+  height: 16px;
+  border-radius: 2px;
+  background: var(--mocha-overlay1);
+}
+
+.module-indicators {
+  display: grid;
+  grid-template-columns: repeat(10, 1fr);
+  gap: 4px;
+}
+
+.segment {
+  height: 8px;
+  border-radius: 2px;
+  background: var(--mocha-surface2);
+}
+
+.module-cpu .segment--lit {
+  background: var(--mocha-blue);
+  box-shadow: 0 0 6px var(--mocha-blue);
+}
+
+.module-gpu .segment--lit {
+  background: var(--mocha-lavender);
+  box-shadow: 0 0 6px var(--mocha-lavender);
+}
+
+.module-cooling .segment--lit {
+  background: var(--mocha-teal);
+  box-shadow: 0 0 6px var(--mocha-teal);
+}
+
+.module-overflow {
+  font-size: 0.8em;
+  color: var(--color-muted-strong);
+  min-height: 1em;
+}
+
+.module-note {
+  font-size: 0.8em;
+  color: var(--color-muted);
+}
+
+.power-core {
+  position: relative;
+  height: 14px;
+  border-radius: 999px;
+  background: var(--mocha-surface2);
+  border: 1px solid var(--color-border-strong);
+  overflow: hidden;
+}
+
+.power-core::after {
+  content: "";
+  position: absolute;
+  inset: 2px;
+  border-radius: 999px;
+  background: var(--mocha-mauve);
+  opacity: calc(0.15 + var(--overclock-intensity) * 0.85);
+  box-shadow: 0 0 calc(10px * var(--overclock-intensity))
+    var(--mocha-mauve);
+  transition: opacity 0.1s linear;
+}
+
+.hashflow {
+  display: grid;
+  gap: 8px;
+  padding: 8px;
+  border-radius: 6px;
+  border: 1px solid var(--color-border);
+  background: var(--mocha-surface0);
+}
+
+.hashflow-header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 0.9em;
+}
+
+.hashflow-title {
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-size: 0.75em;
+  color: var(--color-muted);
+}
+
+.hashflow-bar {
+  height: 10px;
+  border-radius: 6px;
+  overflow: hidden;
+  border: 1px solid var(--color-border-strong);
+  background: var(--mocha-surface1);
+}
+
+.hashflow-fill {
+  height: 100%;
+  width: 0%;
+  background: var(--mocha-blue);
+  opacity: calc(0.25 + var(--hashflow-intensity) * 0.75);
+  transition: width 0.15s linear;
+}
+
+.hashflow-leds {
+  display: grid;
+  grid-template-columns: repeat(10, 1fr);
+  gap: 4px;
+}
+
+.hashflow-led {
+  height: 6px;
+  border-radius: 2px;
+  background: var(--mocha-surface2);
+}
+
+.hashflow-led--lit {
+  background: var(--mocha-blue);
+  box-shadow: 0 0 6px var(--mocha-blue);
+}
+
 #layout {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));

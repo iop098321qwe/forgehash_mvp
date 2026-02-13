@@ -28,6 +28,10 @@
       pauseSeconds: 5,
       coolingReductionPerLevel: 0.1
     },
+    hashFlow: {
+      peakDecayPerSecond: 0.25,
+      minPeak: 0.2
+    },
     prestige: {
       bonusPerPoint: 0.05,
       pointsFromLifetimeCash: (lifetimeCash) => {
@@ -105,11 +109,26 @@
     resumeButton: document.getElementById('resume-btn'),
     restartButton: document.getElementById('restart-btn'),
     endButton: document.getElementById('end-btn'),
+    rigVisual: document.getElementById('rig-visual'),
+    cpuIndicators: document.getElementById('cpu-indicators'),
+    gpuIndicators: document.getElementById('gpu-indicators'),
+    coolingIndicators: document.getElementById('cooling-indicators'),
+    cpuOverflow: document.getElementById('cpu-overflow'),
+    gpuOverflow: document.getElementById('gpu-overflow'),
+    coolingOverflow: document.getElementById('cooling-overflow'),
+    cpuLevel: document.getElementById('cpu-level'),
+    gpuLevel: document.getElementById('gpu-level'),
+    coolingLevel: document.getElementById('cooling-level'),
+    powerStatus: document.getElementById('power-status'),
+    hashflowFill: document.getElementById('hashflow-fill'),
+    hashflowRate: document.getElementById('hashflow-rate'),
+    hashflowLeds: document.getElementById('hashflow-leds'),
     upgradeRows: {}
   };
 
   // ===== Initialization =====
   initUI();
+  initRigVisuals();
   loadGame();
   render();
   startMainLoop();
@@ -117,7 +136,7 @@
   window.addEventListener('beforeunload', saveGame);
 
   // ===== UI setup =====
-  function initUI() {
+function initUI() {
   ui.startButton.addEventListener('click', startGame);
   ui.pauseButton.addEventListener('click', togglePause);
   ui.sellButton.addEventListener('click', sellAllHashDust);
@@ -132,7 +151,7 @@
   window.addEventListener('keydown', handleKeyDown);
   window.addEventListener('pointerup', stopOverclock);
 
-    UPGRADES.forEach((upgrade) => {
+  UPGRADES.forEach((upgrade) => {
       const row = document.createElement('div');
       row.className = 'upgrade-row';
 
@@ -178,8 +197,35 @@
         costSpan,
         button
       };
-    });
+  });
+}
+
+function initRigVisuals() {
+  if (!ui.cpuIndicators || !ui.hashflowLeds) {
+    return;
   }
+
+  ui.rigSegments = {
+    cpu: buildSegments(ui.cpuIndicators, 10, 'segment'),
+    gpu: buildSegments(ui.gpuIndicators, 10, 'segment'),
+    cooling: buildSegments(ui.coolingIndicators, 10, 'segment'),
+    hashflow: buildSegments(ui.hashflowLeds, 10, 'hashflow-led')
+  };
+}
+
+function buildSegments(container, count, className) {
+  const segments = [];
+  container.innerHTML = '';
+
+  for (let i = 0; i < count; i += 1) {
+    const segment = document.createElement('span');
+    segment.className = className;
+    container.appendChild(segment);
+    segments.push(segment);
+  }
+
+  return segments;
+}
 
   // ===== Game logic =====
   function update(deltaSeconds) {
@@ -192,6 +238,7 @@
 
   updateTimers(dt);
   updateOverclock(dt);
+  updateHashRatePeak(dt);
   processMining(dt);
   processCrashCheck(dt);
 }
@@ -341,6 +388,28 @@ function updateOverclock(dt) {
   }
 }
 
+function updateHashRatePeak(dt) {
+  const currentRate = getEffectiveHashRate();
+  const decay = FORMULAS.hashFlow.peakDecayPerSecond * dt;
+
+  if (gameState.hashRatePeak === 0) {
+    gameState.hashRatePeak = Math.max(currentRate, FORMULAS.hashFlow.minPeak);
+    return;
+  }
+
+  gameState.hashRatePeak = Math.max(
+    currentRate,
+    gameState.hashRatePeak - decay
+  );
+
+  if (gameState.hashRatePeak < FORMULAS.hashFlow.minPeak) {
+    gameState.hashRatePeak = Math.max(
+      currentRate,
+      FORMULAS.hashFlow.minPeak
+    );
+  }
+}
+
   function processMining(dt) {
     const effectiveRate = getEffectiveHashRate();
     gameState.hashDust += effectiveRate * dt;
@@ -431,6 +500,8 @@ function buyUpgrade(upgradeId) {
   const meterRatio = getOverclockMeterRatio();
   const meterPercent = Math.round(meterRatio * 100);
   const overclockMultiplier = getOverclockMultiplier();
+  const overclockIntensity = getOverclockIntensity(overclockMultiplier);
+  const hashflowIntensity = getHashflowIntensity(effectiveRate);
 
     ui.startScreen.classList.toggle('hidden', !showStartScreen);
     ui.gameShell.classList.toggle('hidden', showStartScreen);
@@ -474,6 +545,15 @@ function buyUpgrade(upgradeId) {
   ui.overclockMeterFill.style.width = `${meterPercent}%`;
   ui.overclockMeterText.textContent = `${meterPercent}%`;
   ui.overclockMultiplier.textContent = `${formatNumber(overclockMultiplier)}x`;
+  if (gameState.overclockActive) {
+    ui.powerStatus.textContent = 'Overclocking';
+  } else if (gameState.overclockDecaySeconds > 0) {
+    ui.powerStatus.textContent = 'Cooling';
+  } else if (meterRatio >= 1) {
+    ui.powerStatus.textContent = 'Ready';
+  } else {
+    ui.powerStatus.textContent = 'Recharging';
+  }
 
   ui.startButton.disabled = !canStart;
   ui.pauseButton.disabled = !(isRunning || isPaused);
@@ -483,14 +563,15 @@ function buyUpgrade(upgradeId) {
     (!gameState.overclockActive && gameState.overclockMeter <= 0);
   ui.reforgeButton.disabled = !isRunning;
 
-    ui.pauseOverlay.classList.toggle('hidden', !isPaused);
-    ui.pauseOverlay.setAttribute('aria-hidden', String(!isPaused));
+  ui.pauseOverlay.classList.toggle('hidden', !isPaused);
+  ui.pauseOverlay.setAttribute('aria-hidden', String(!isPaused));
 
-    renderUpgrades();
-    renderLog();
-  }
+  renderRigVisuals(effectiveRate, overclockIntensity, hashflowIntensity);
+  renderUpgrades();
+  renderLog();
+}
 
-  function renderUpgrades() {
+function renderUpgrades() {
     const isRunning = gameState.sessionState === SESSION_STATES.RUNNING;
     UPGRADES.forEach((upgrade) => {
       const level = gameState.upgrades[upgrade.id];
@@ -538,6 +619,65 @@ function getUpgradeCost(upgrade, level) {
   return upgrade.baseCost * Math.pow(upgrade.costMultiplier, level);
 }
 
+function renderRigVisuals(effectiveRate, overclockIntensity, hashflowIntensity) {
+  if (!ui.rigVisual || !ui.rigSegments) {
+    return;
+  }
+
+  const cpuLevel = gameState.upgrades.cpu;
+  const gpuLevel = gameState.upgrades.gpu;
+  const coolingLevel = gameState.upgrades.cooling;
+
+  setSegments(ui.rigSegments.cpu, cpuLevel);
+  setSegments(ui.rigSegments.gpu, gpuLevel);
+  setSegments(ui.rigSegments.cooling, coolingLevel);
+
+  ui.cpuLevel.textContent = `Lv ${cpuLevel}`;
+  ui.gpuLevel.textContent = `Lv ${gpuLevel}`;
+  ui.coolingLevel.textContent = `Lv ${coolingLevel}`;
+
+  ui.cpuOverflow.textContent = formatOverflow(cpuLevel, ui.rigSegments.cpu.length);
+  ui.gpuOverflow.textContent = formatOverflow(gpuLevel, ui.rigSegments.gpu.length);
+  ui.coolingOverflow.textContent = formatOverflow(
+    coolingLevel,
+    ui.rigSegments.cooling.length
+  );
+
+  const ledCount = Math.round(hashflowIntensity * ui.rigSegments.hashflow.length);
+  setSegments(ui.rigSegments.hashflow, ledCount, 'hashflow-led--lit');
+
+  ui.hashflowFill.style.width = `${Math.round(hashflowIntensity * 100)}%`;
+  ui.hashflowRate.textContent = `${formatNumber(effectiveRate)} H/s`;
+
+  ui.rigVisual.style.setProperty(
+    '--overclock-intensity',
+    overclockIntensity.toFixed(2)
+  );
+  ui.rigVisual.style.setProperty(
+    '--hashflow-intensity',
+    hashflowIntensity.toFixed(2)
+  );
+}
+
+function setSegments(segments, level, litClass = 'segment--lit') {
+  const litCount = Math.min(level, segments.length);
+
+  segments.forEach((segment, index) => {
+    if (index < litCount) {
+      segment.classList.add(litClass);
+    } else {
+      segment.classList.remove(litClass);
+    }
+  });
+}
+
+function formatOverflow(level, limit) {
+  if (level <= limit) {
+    return '';
+  }
+  return `+${level - limit}`;
+}
+
 function getOverclockMeterRatio() {
   if (FORMULAS.overclock.meterMaxSeconds <= 0) {
     return 0;
@@ -570,6 +710,32 @@ function getOverclockMultiplier() {
   );
 
   return 1 + (FORMULAS.overclock.maxMultiplier - 1) * rampRatio;
+}
+
+function getOverclockIntensity(overclockMultiplier) {
+  if (FORMULAS.overclock.maxMultiplier <= 1) {
+    return 0;
+  }
+
+  return clamp(
+    (overclockMultiplier - 1) /
+      (FORMULAS.overclock.maxMultiplier - 1),
+    0,
+    1
+  );
+}
+
+function getHashflowIntensity(effectiveRate) {
+  const peak = Math.max(gameState.hashRatePeak, FORMULAS.hashFlow.minPeak);
+  if (peak <= 0) {
+    return 0;
+  }
+
+  return clamp(effectiveRate / peak, 0, 1);
+}
+
+function clamp(value, min, max) {
+  return Math.min(max, Math.max(min, value));
 }
 
   function getSessionStatusLabel() {
@@ -666,6 +832,7 @@ function getOverclockMultiplier() {
       overclockDecaySeconds: 0,
       overclockRechargeRemaining: FORMULAS.starting.overclockRechargeRemaining,
       overclockActive: false,
+      hashRatePeak: 0,
       log: [],
       sessionState: SESSION_STATES.READY
     };
@@ -786,6 +953,7 @@ function getOverclockMultiplier() {
     gameState.overclockHoldSeconds = 0;
     gameState.overclockDecaySeconds = 0;
     gameState.overclockActive = false;
+    gameState.hashRatePeak = 0;
 
     gameState.sessionState = SESSION_STATES.READY;
   }
