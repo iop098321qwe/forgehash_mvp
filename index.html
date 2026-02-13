@@ -21,6 +21,7 @@
               <li>Sell HashDust to earn Cash for upgrades.</li>
               <li>Upgrade CPU/GPU to increase H/s.</li>
               <li>Reforge to gain permanent Blueprint bonuses.</li>
+              <li>Hold Overclock to build a temporary multiplier.</li>
             </ul>
           </div>
           <div>
@@ -75,8 +76,8 @@
             <span id="mining-status">Inactive</span>
           </div>
           <div class="stat-row">
-            <span>Manual boost</span>
-            <span id="boost-status">Inactive</span>
+            <span>Overclock</span>
+            <span id="overclock-status">Ready</span>
           </div>
         </section>
 
@@ -85,11 +86,21 @@
           <div class="button-stack">
             <button id="pause-btn">Pause (P)</button>
             <button id="sell-btn">Sell All HashDust</button>
-            <button id="boost-btn">Manual Boost (2x for 5s)</button>
+            <button id="overclock-btn" class="primary hold-button">Hold Overclock</button>
+          </div>
+          <div class="overclock-meter" aria-hidden="true">
+            <div class="overclock-meter-fill" id="overclock-meter-fill"></div>
+          </div>
+          <div class="stat-row">
+            <span>Meter</span>
+            <span id="overclock-meter-text">100%</span>
+          </div>
+          <div class="stat-row">
+            <span>Multiplier</span>
+            <span id="overclock-multiplier">1.00x</span>
           </div>
           <div class="muted">
-            Sell converts all HashDust into Cash. Boost stacks with all
-            modifiers.
+            Hold to build a multiplier. Release to recharge the meter.
           </div>
         </section>
 

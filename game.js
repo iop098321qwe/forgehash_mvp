@@ -5,15 +5,22 @@
   const FORMULAS = {
     baseHashRate: 0.1,
     hashDustToCash: 1,
-    boostMultiplier: 2,
-    boostDurationSeconds: 5,
+    overclock: {
+      maxMultiplier: 3,
+      rampSeconds: 2,
+      meterMaxSeconds: 8,
+      drainRate: 1,
+      rechargeRate: 1.5,
+      rechargeDelaySeconds: 0.5
+    },
     starting: {
       hashDust: 7,
       cash: 8,
       lifetimeCash: 0,
       blueprintPoints: 0,
-      manualBoostRemaining: 0,
-      crashRemaining: 0
+      crashRemaining: 0,
+      overclockMeter: 8,
+      overclockRechargeRemaining: 0
     },
     crash: {
       threshold: 5,
@@ -77,14 +84,17 @@
     hashRateValue: document.getElementById('hashrate-value'),
     sessionStatus: document.getElementById('session-status'),
     miningStatus: document.getElementById('mining-status'),
-    boostStatus: document.getElementById('boost-status'),
+    overclockStatus: document.getElementById('overclock-status'),
     startButton: document.getElementById('start-btn'),
     startScreen: document.getElementById('start-screen'),
     startMessage: document.getElementById('start-message'),
     gameShell: document.getElementById('game-shell'),
     pauseButton: document.getElementById('pause-btn'),
     sellButton: document.getElementById('sell-btn'),
-    boostButton: document.getElementById('boost-btn'),
+    overclockButton: document.getElementById('overclock-btn'),
+    overclockMeterFill: document.getElementById('overclock-meter-fill'),
+    overclockMeterText: document.getElementById('overclock-meter-text'),
+    overclockMultiplier: document.getElementById('overclock-multiplier'),
     reforgeButton: document.getElementById('reforge-btn'),
     blueprintPoints: document.getElementById('blueprint-points'),
     prestigeBonus: document.getElementById('prestige-bonus'),
@@ -108,15 +118,19 @@
 
   // ===== UI setup =====
   function initUI() {
-    ui.startButton.addEventListener('click', startGame);
-    ui.pauseButton.addEventListener('click', togglePause);
-    ui.sellButton.addEventListener('click', sellAllHashDust);
-    ui.boostButton.addEventListener('click', activateManualBoost);
-    ui.reforgeButton.addEventListener('click', reforge);
-    ui.resumeButton.addEventListener('click', resumeGame);
-    ui.restartButton.addEventListener('click', restartGame);
-    ui.endButton.addEventListener('click', endGame);
-    window.addEventListener('keydown', handleKeyDown);
+  ui.startButton.addEventListener('click', startGame);
+  ui.pauseButton.addEventListener('click', togglePause);
+  ui.sellButton.addEventListener('click', sellAllHashDust);
+  ui.overclockButton.addEventListener('pointerdown', startOverclock);
+  ui.overclockButton.addEventListener('pointerup', stopOverclock);
+  ui.overclockButton.addEventListener('pointerleave', stopOverclock);
+  ui.overclockButton.addEventListener('pointercancel', stopOverclock);
+  ui.reforgeButton.addEventListener('click', reforge);
+  ui.resumeButton.addEventListener('click', resumeGame);
+  ui.restartButton.addEventListener('click', restartGame);
+  ui.endButton.addEventListener('click', endGame);
+  window.addEventListener('keydown', handleKeyDown);
+  window.addEventListener('pointerup', stopOverclock);
 
     UPGRADES.forEach((upgrade) => {
       const row = document.createElement('div');
@@ -176,10 +190,11 @@
       return;
     }
 
-    updateTimers(dt);
-    processMining(dt);
-    processCrashCheck(dt);
-  }
+  updateTimers(dt);
+  updateOverclock(dt);
+  processMining(dt);
+  processCrashCheck(dt);
+}
 
   // ===== Session control =====
   function startGame() {
@@ -193,13 +208,14 @@
     render();
   }
 
-  function pauseGame() {
-    if (gameState.sessionState !== SESSION_STATES.RUNNING) {
-      return;
-    }
-    gameState.sessionState = SESSION_STATES.PAUSED;
-    render();
+function pauseGame() {
+  if (gameState.sessionState !== SESSION_STATES.RUNNING) {
+    return;
   }
+  gameState.sessionState = SESSION_STATES.PAUSED;
+  stopOverclock();
+  render();
+}
 
   function resumeGame() {
     if (gameState.sessionState !== SESSION_STATES.PAUSED) {
@@ -209,13 +225,49 @@
     render();
   }
 
-  function togglePause() {
-    if (gameState.sessionState === SESSION_STATES.RUNNING) {
-      pauseGame();
-    } else if (gameState.sessionState === SESSION_STATES.PAUSED) {
-      resumeGame();
-    }
+function togglePause() {
+  if (gameState.sessionState === SESSION_STATES.RUNNING) {
+    pauseGame();
+  } else if (gameState.sessionState === SESSION_STATES.PAUSED) {
+    resumeGame();
   }
+}
+
+function startOverclock(event) {
+  if (gameState.sessionState !== SESSION_STATES.RUNNING) {
+    return;
+  }
+  if (gameState.overclockMeter <= 0) {
+    return;
+  }
+  if (gameState.overclockActive) {
+    return;
+  }
+
+  gameState.overclockActive = true;
+  gameState.overclockHoldSeconds = Math.min(
+    FORMULAS.overclock.rampSeconds,
+    Math.max(0, gameState.overclockDecaySeconds)
+  );
+  gameState.overclockDecaySeconds = 0;
+  gameState.overclockRechargeRemaining = 0;
+
+  if (event && ui.overclockButton.setPointerCapture) {
+    ui.overclockButton.setPointerCapture(event.pointerId);
+  }
+}
+
+function stopOverclock() {
+  if (!gameState.overclockActive) {
+    return;
+  }
+
+  gameState.overclockActive = false;
+  gameState.overclockDecaySeconds = gameState.overclockHoldSeconds;
+  gameState.overclockHoldSeconds = 0;
+  gameState.overclockRechargeRemaining =
+    FORMULAS.overclock.rechargeDelaySeconds;
+}
 
   function handleKeyDown(event) {
     if (event.code !== 'KeyP') {
@@ -241,17 +293,53 @@
     render();
   }
 
-  function updateTimers(dt) {
-    if (gameState.manualBoostRemaining > 0) {
-      gameState.manualBoostRemaining = Math.max(
-        0,
-        gameState.manualBoostRemaining - dt
-      );
-    }
-    if (gameState.crashRemaining > 0) {
-      gameState.crashRemaining = Math.max(0, gameState.crashRemaining - dt);
-    }
+function updateTimers(dt) {
+  if (gameState.crashRemaining > 0) {
+    gameState.crashRemaining = Math.max(0, gameState.crashRemaining - dt);
   }
+}
+
+function updateOverclock(dt) {
+  if (gameState.overclockActive) {
+    gameState.overclockHoldSeconds = Math.min(
+      FORMULAS.overclock.rampSeconds,
+      gameState.overclockHoldSeconds + dt
+    );
+    gameState.overclockMeter = Math.max(
+      0,
+      gameState.overclockMeter - FORMULAS.overclock.drainRate * dt
+    );
+
+    if (gameState.overclockMeter <= 0) {
+      gameState.overclockMeter = 0;
+      stopOverclock();
+    }
+
+    return;
+  }
+
+  if (gameState.overclockDecaySeconds > 0) {
+    gameState.overclockDecaySeconds = Math.max(
+      0,
+      gameState.overclockDecaySeconds - dt
+    );
+  }
+
+  if (gameState.overclockRechargeRemaining > 0) {
+    gameState.overclockRechargeRemaining = Math.max(
+      0,
+      gameState.overclockRechargeRemaining - dt
+    );
+    return;
+  }
+
+  if (gameState.overclockMeter < FORMULAS.overclock.meterMaxSeconds) {
+    gameState.overclockMeter = Math.min(
+      FORMULAS.overclock.meterMaxSeconds,
+      gameState.overclockMeter + FORMULAS.overclock.rechargeRate * dt
+    );
+  }
+}
 
   function processMining(dt) {
     const effectiveRate = getEffectiveHashRate();
@@ -294,14 +382,7 @@
     gameState.lifetimeCash += cashGained;
   }
 
-  function activateManualBoost() {
-    if (gameState.sessionState !== SESSION_STATES.RUNNING) {
-      return;
-    }
-    gameState.manualBoostRemaining = FORMULAS.boostDurationSeconds;
-  }
-
-  function buyUpgrade(upgradeId) {
+function buyUpgrade(upgradeId) {
     if (gameState.sessionState !== SESSION_STATES.RUNNING) {
       return;
     }
@@ -329,10 +410,9 @@
       gameState.blueprintPoints = totalPoints;
     }
 
-    gameState.hashDust = 0;
-    gameState.cash = 0;
-    gameState.manualBoostRemaining = 0;
-    gameState.crashRemaining = 0;
+  gameState.hashDust = 0;
+  gameState.cash = 0;
+  gameState.crashRemaining = 0;
 
     UPGRADES.forEach((upgrade) => {
       gameState.upgrades[upgrade.id] = 0;
@@ -341,13 +421,16 @@
 
   // ===== Rendering (UI updates only) =====
   function render() {
-    const effectiveRate = getEffectiveHashRate();
-    const isRunning = gameState.sessionState === SESSION_STATES.RUNNING;
-    const isPaused = gameState.sessionState === SESSION_STATES.PAUSED;
-    const isReady = gameState.sessionState === SESSION_STATES.READY;
-    const isEnded = gameState.sessionState === SESSION_STATES.ENDED;
-    const canStart = isReady || isEnded;
-    const showStartScreen = canStart;
+  const effectiveRate = getEffectiveHashRate();
+  const isRunning = gameState.sessionState === SESSION_STATES.RUNNING;
+  const isPaused = gameState.sessionState === SESSION_STATES.PAUSED;
+  const isReady = gameState.sessionState === SESSION_STATES.READY;
+  const isEnded = gameState.sessionState === SESSION_STATES.ENDED;
+  const canStart = isReady || isEnded;
+  const showStartScreen = canStart;
+  const meterRatio = getOverclockMeterRatio();
+  const meterPercent = Math.round(meterRatio * 100);
+  const overclockMultiplier = getOverclockMultiplier();
 
     ui.startScreen.classList.toggle('hidden', !showStartScreen);
     ui.gameShell.classList.toggle('hidden', showStartScreen);
@@ -373,28 +456,32 @@
         : 'Active';
     }
 
-    if (isPaused) {
-      ui.boostStatus.textContent = gameState.manualBoostRemaining > 0
-        ? `Paused (${formatSeconds(gameState.manualBoostRemaining)})`
-        : 'Paused';
-    } else if (isRunning && gameState.manualBoostRemaining > 0) {
-      ui.boostStatus.textContent =
-        `Active (${formatSeconds(gameState.manualBoostRemaining)})`;
-    } else {
-      ui.boostStatus.textContent = 'Inactive';
-    }
+  if (gameState.overclockActive) {
+    ui.overclockStatus.textContent = 'Overclocking';
+  } else if (gameState.overclockDecaySeconds > 0) {
+    ui.overclockStatus.textContent = 'Cooling';
+  } else if (meterRatio >= 1) {
+    ui.overclockStatus.textContent = 'Ready';
+  } else {
+    ui.overclockStatus.textContent = 'Recharging';
+  }
 
-    ui.blueprintPoints.textContent = `${gameState.blueprintPoints}`;
-    ui.prestigeBonus.textContent =
-      `+${formatNumber(getPrestigeBonusMultiplier() * 100 - 100)}%`;
-    ui.lifetimeCash.textContent = formatNumber(gameState.lifetimeCash);
+  ui.blueprintPoints.textContent = `${gameState.blueprintPoints}`;
+  ui.prestigeBonus.textContent =
+    `+${formatNumber(getPrestigeBonusMultiplier() * 100 - 100)}%`;
+  ui.lifetimeCash.textContent = formatNumber(gameState.lifetimeCash);
 
-    ui.startButton.disabled = !canStart;
-    ui.pauseButton.disabled = !(isRunning || isPaused);
-    ui.pauseButton.textContent = isPaused ? 'Resume (P)' : 'Pause (P)';
-    ui.sellButton.disabled = !isRunning || gameState.hashDust <= 0;
-    ui.boostButton.disabled = !isRunning;
-    ui.reforgeButton.disabled = !isRunning;
+  ui.overclockMeterFill.style.width = `${meterPercent}%`;
+  ui.overclockMeterText.textContent = `${meterPercent}%`;
+  ui.overclockMultiplier.textContent = `${formatNumber(overclockMultiplier)}x`;
+
+  ui.startButton.disabled = !canStart;
+  ui.pauseButton.disabled = !(isRunning || isPaused);
+  ui.pauseButton.textContent = isPaused ? 'Resume (P)' : 'Pause (P)';
+  ui.sellButton.disabled = !isRunning || gameState.hashDust <= 0;
+  ui.overclockButton.disabled = !isRunning ||
+    (!gameState.overclockActive && gameState.overclockMeter <= 0);
+  ui.reforgeButton.disabled = !isRunning;
 
     ui.pauseOverlay.classList.toggle('hidden', !isPaused);
     ui.pauseOverlay.setAttribute('aria-hidden', String(!isPaused));
@@ -447,9 +534,43 @@
     return UPGRADES.find((upgrade) => upgrade.id === id);
   }
 
-  function getUpgradeCost(upgrade, level) {
-    return upgrade.baseCost * Math.pow(upgrade.costMultiplier, level);
+function getUpgradeCost(upgrade, level) {
+  return upgrade.baseCost * Math.pow(upgrade.costMultiplier, level);
+}
+
+function getOverclockMeterRatio() {
+  if (FORMULAS.overclock.meterMaxSeconds <= 0) {
+    return 0;
   }
+  return Math.max(
+    0,
+    Math.min(
+      1,
+      gameState.overclockMeter / FORMULAS.overclock.meterMaxSeconds
+    )
+  );
+}
+
+function getOverclockMultiplier() {
+  if (FORMULAS.overclock.rampSeconds <= 0) {
+    return gameState.overclockActive ? FORMULAS.overclock.maxMultiplier : 1;
+  }
+
+  const effectiveSeconds = gameState.overclockActive
+    ? gameState.overclockHoldSeconds
+    : gameState.overclockDecaySeconds;
+
+  if (effectiveSeconds <= 0) {
+    return 1;
+  }
+
+  const rampRatio = Math.min(
+    1,
+    effectiveSeconds / FORMULAS.overclock.rampSeconds
+  );
+
+  return 1 + (FORMULAS.overclock.maxMultiplier - 1) * rampRatio;
+}
 
   function getSessionStatusLabel() {
     switch (gameState.sessionState) {
@@ -481,15 +602,13 @@
   }
 
   function getHashRateBeforeCrash() {
-    let rate = getBaseHashRate() + getUpgradeHashRate();
-    rate *= getPrestigeBonusMultiplier();
+  let rate = getBaseHashRate() + getUpgradeHashRate();
+  rate *= getPrestigeBonusMultiplier();
 
-    if (gameState.manualBoostRemaining > 0) {
-      rate *= FORMULAS.boostMultiplier;
-    }
+  rate *= getOverclockMultiplier();
 
-    return rate;
-  }
+  return rate;
+}
 
   function getEffectiveHashRate() {
     if (gameState.sessionState !== SESSION_STATES.RUNNING) {
@@ -539,10 +658,14 @@
       hashDust: FORMULAS.starting.hashDust,
       cash: FORMULAS.starting.cash,
       upgrades: upgradeLevels,
-      manualBoostRemaining: FORMULAS.starting.manualBoostRemaining,
       crashRemaining: FORMULAS.starting.crashRemaining,
       lifetimeCash: FORMULAS.starting.lifetimeCash,
       blueprintPoints: FORMULAS.starting.blueprintPoints,
+      overclockMeter: FORMULAS.starting.overclockMeter,
+      overclockHoldSeconds: 0,
+      overclockDecaySeconds: 0,
+      overclockRechargeRemaining: FORMULAS.starting.overclockRechargeRemaining,
+      overclockActive: false,
       log: [],
       sessionState: SESSION_STATES.READY
     };
@@ -577,10 +700,11 @@
       hashDust: gameState.hashDust,
       cash: gameState.cash,
       upgrades: gameState.upgrades,
-      manualBoostRemaining: gameState.manualBoostRemaining,
       crashRemaining: gameState.crashRemaining,
       lifetimeCash: gameState.lifetimeCash,
       blueprintPoints: gameState.blueprintPoints,
+      overclockMeter: gameState.overclockMeter,
+      overclockRechargeRemaining: gameState.overclockRechargeRemaining,
       log: gameState.log
     };
 
@@ -616,10 +740,6 @@
 
     gameState.hashDust = safeNumber(data.hashDust, defaults.hashDust);
     gameState.cash = safeNumber(data.cash, defaults.cash);
-    gameState.manualBoostRemaining = safeNumber(
-      data.manualBoostRemaining,
-      defaults.manualBoostRemaining
-    );
     gameState.crashRemaining = safeNumber(
       data.crashRemaining,
       defaults.crashRemaining
@@ -648,6 +768,24 @@
     } else {
       gameState.log = defaults.log;
     }
+
+    gameState.overclockMeter = Math.min(
+      FORMULAS.overclock.meterMaxSeconds,
+      Math.max(
+        0,
+        safeNumber(data.overclockMeter, defaults.overclockMeter)
+      )
+    );
+    gameState.overclockRechargeRemaining = Math.max(
+      0,
+      safeNumber(
+        data.overclockRechargeRemaining,
+        defaults.overclockRechargeRemaining
+      )
+    );
+    gameState.overclockHoldSeconds = 0;
+    gameState.overclockDecaySeconds = 0;
+    gameState.overclockActive = false;
 
     gameState.sessionState = SESSION_STATES.READY;
   }
