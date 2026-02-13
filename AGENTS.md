@@ -69,14 +69,18 @@ repository.
 - `gameState` is the only mutable state object. It holds:
   - Resources: `hashDust`, `cash`.
   - Upgrades: `upgrades` object keyed by upgrade id.
-  - Timers: `manualBoostRemaining`, `crashRemaining`.
+  - Timers: `crashRemaining`.
+  - Overclock: `overclockMeter`, `overclockHoldSeconds`,
+    `overclockDecaySeconds`, `overclockRechargeRemaining`,
+    `overclockActive`.
   - Progression: `lifetimeCash`, `blueprintPoints`.
   - UI log: `log` array of crash messages.
   - Session control: `sessionState`.
 - `SESSION_STATES` defines the allowed session states: `ready`,
   `running`, `paused`, `ended`.
 - `FORMULAS` centralizes all tunable numbers, including mining rates,
-  crash math, prestige scaling, save interval, and starting values.
+  crash math, overclock tuning, prestige scaling, save interval, and
+  starting values.
 - `FORMULAS.starting` provides the default run stash used by
   `createDefaultGameState()`.
 
@@ -87,8 +91,9 @@ repository.
 - Game shell (`#game-shell`) contains the panels and is hidden until the
   session is running or paused.
 - Stats panel shows HashDust, Cash, hash rate, session status, mining
-  status, and manual boost status.
-- Actions panel exposes Pause/Resume toggle, Sell All, and Manual Boost.
+  status, and overclock status.
+- Actions panel exposes Pause/Resume toggle, Sell All, and Hold
+  Overclock controls with a meter.
 - Upgrades panel is populated at runtime from `UPGRADES`.
 - Prestige panel shows Blueprint Points, permanent bonus, lifetime cash,
   and the Reforge action.
@@ -121,19 +126,23 @@ repository.
 - Upgrade hash rate is the sum of CPU and GPU levels multiplied by each
   upgrade's per-level contribution.
 - Prestige multiplier is `1 + blueprintPoints * bonusPerPoint`.
-- Manual boost multiplies total hash rate by
-  `FORMULAS.boostMultiplier` while active.
+- Overclock multiplies total hash rate by the current ramped multiplier
+  while held.
 - Effective hash rate becomes zero when the game is paused, not
   started, ended, or in a crash cooldown.
 
-### Manual boost
+### Overclock (hold)
 
-- `activateManualBoost()` resets `manualBoostRemaining` to
-  `FORMULAS.boostDurationSeconds`.
-- The boost timer counts down in `updateTimers()` and is frozen whenever
-  `update()` is gated by session state.
-- Re-activating the boost resets the timer; the boost remains a simple
-  multiplier rather than a stackable percentage.
+- Holding the Overclock button drains `overclockMeter` while building a
+  multiplier up to `FORMULAS.overclock.maxMultiplier`.
+- `overclockHoldSeconds` tracks the ramp time, capped by
+  `FORMULAS.overclock.rampSeconds`.
+- Releasing sets `overclockActive` to false and starts a recharge delay
+  (`overclockRechargeRemaining`).
+- `overclockDecaySeconds` tracks the smooth ramp-down after release.
+- Once the delay expires, the meter recharges at
+  `FORMULAS.overclock.rechargeRate` until it reaches
+  `FORMULAS.overclock.meterMaxSeconds`.
 
 ### Crash system
 
@@ -196,6 +205,7 @@ repository.
 
 - Save key: `forgehash_mvp_save_v1` in `localStorage`.
 - `saveGame()` writes numeric state, upgrades, timers, and log entries.
+- Overclock meter and recharge delay are persisted in saves.
 - Saves run every `FORMULAS.saveIntervalMs` and on `beforeunload`.
 - Saves are skipped when the session is Ready or Ended.
 - Storage calls are wrapped in `try/catch` to avoid errors when
@@ -276,6 +286,7 @@ repository.
   only in Ready or Ended state).
 - Hash rate is zero: check for Paused status, Ended status, or crash
   cooldown.
+- Overclock is unavailable: wait for the meter to recharge.
 - Pause overlay will not close: press `P` or click `Resume`.
 - Saves do not persist: ensure browser `localStorage` is enabled.
 - Upgrades are disabled: confirm the session is Running and cash is

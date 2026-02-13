@@ -40,6 +40,9 @@
   --color-accent-contrast: var(--mocha-crust);
   --color-button: var(--mocha-surface1);
   --color-button-hover: var(--mocha-surface2);
+  --color-meter-bg: var(--mocha-surface1);
+  --color-meter-border: var(--mocha-surface2);
+  --color-meter-fill: var(--mocha-green);
   --color-overlay: rgba(17, 17, 27, 0.72);
 }
 
@@ -191,6 +194,27 @@ button.primary:hover:enabled {
 
 .button-stack button {
   width: 100%;
+}
+
+.hold-button {
+  touch-action: none;
+  user-select: none;
+}
+
+.overclock-meter {
+  height: 10px;
+  margin-top: 8px;
+  border: 1px solid var(--color-meter-border);
+  background: var(--color-meter-bg);
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.overclock-meter-fill {
+  height: 100%;
+  width: 100%;
+  background: var(--color-meter-fill);
+  transition: width 0.1s linear;
 }
 
 .upgrade-row {
