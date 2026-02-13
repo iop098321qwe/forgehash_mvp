@@ -81,6 +81,89 @@
           </div>
         </section>
 
+        <section class="panel" id="rig-panel">
+          <h2>Server Bay</h2>
+          <div class="rig" id="rig-visual">
+            <div class="rack">
+              <div class="rack-shelf">
+                <div class="module module-cpu">
+                  <div class="module-header">
+                    <span class="module-title">CPU Array</span>
+                    <span class="module-level" id="cpu-level">Lv 0</span>
+                  </div>
+                  <div class="module-body">
+                    <div class="module-icon cpu-icon" aria-hidden="true">
+                      <span class="cpu-core"></span>
+                      <span class="cpu-core"></span>
+                      <span class="cpu-core"></span>
+                      <span class="cpu-core"></span>
+                    </div>
+                    <div class="module-indicators" id="cpu-indicators"></div>
+                  </div>
+                  <div class="module-overflow" id="cpu-overflow"></div>
+                </div>
+
+                <div class="module module-gpu">
+                  <div class="module-header">
+                    <span class="module-title">GPU Stack</span>
+                    <span class="module-level" id="gpu-level">Lv 0</span>
+                  </div>
+                  <div class="module-body">
+                    <div class="module-icon gpu-icon" aria-hidden="true">
+                      <span class="gpu-fan"></span>
+                      <span class="gpu-fan"></span>
+                    </div>
+                    <div class="module-indicators" id="gpu-indicators"></div>
+                  </div>
+                  <div class="module-overflow" id="gpu-overflow"></div>
+                </div>
+              </div>
+
+              <div class="rack-shelf">
+                <div class="module module-cooling">
+                  <div class="module-header">
+                    <span class="module-title">Cooling Grid</span>
+                    <span class="module-level" id="cooling-level">Lv 0</span>
+                  </div>
+                  <div class="module-body">
+                    <div class="module-icon cooling-icon" aria-hidden="true">
+                      <span class="cooling-fin"></span>
+                      <span class="cooling-fin"></span>
+                      <span class="cooling-fin"></span>
+                      <span class="cooling-fin"></span>
+                      <span class="cooling-fin"></span>
+                    </div>
+                    <div class="module-indicators" id="cooling-indicators"></div>
+                  </div>
+                  <div class="module-overflow" id="cooling-overflow"></div>
+                </div>
+
+                <div class="module module-power">
+                  <div class="module-header">
+                    <span class="module-title">Power Core</span>
+                    <span class="module-level" id="power-status">Idle</span>
+                  </div>
+                  <div class="power-core" id="power-core"></div>
+                  <div class="module-note muted">
+                    Overclock glow scales with the multiplier.
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="hashflow">
+              <div class="hashflow-header">
+                <span class="hashflow-title">HashFlow</span>
+                <span id="hashflow-rate">0.00 H/s</span>
+              </div>
+              <div class="hashflow-bar">
+                <div class="hashflow-fill" id="hashflow-fill"></div>
+              </div>
+              <div class="hashflow-leds" id="hashflow-leds"></div>
+            </div>
+          </div>
+        </section>
+
         <section class="panel" id="actions-panel">
           <h2>Actions</h2>
           <div class="button-stack">

@@ -74,13 +74,14 @@ repository.
     `overclockDecaySeconds`, `overclockRechargeRemaining`,
     `overclockActive`.
   - Progression: `lifetimeCash`, `blueprintPoints`.
+  - Visuals: `hashRatePeak` for the HashFlow gauge normalization.
   - UI log: `log` array of crash messages.
   - Session control: `sessionState`.
 - `SESSION_STATES` defines the allowed session states: `ready`,
   `running`, `paused`, `ended`.
 - `FORMULAS` centralizes all tunable numbers, including mining rates,
-  crash math, overclock tuning, prestige scaling, save interval, and
-  starting values.
+  crash math, overclock tuning, HashFlow tuning, prestige scaling, save
+  interval, and starting values.
 - `FORMULAS.starting` provides the default run stash used by
   `createDefaultGameState()`.
 
@@ -94,6 +95,8 @@ repository.
   status, and overclock status.
 - Actions panel exposes Pause/Resume toggle, Sell All, and Hold
   Overclock controls with a meter.
+- Server Bay panel visualizes the rack, upgrade modules, overclock core,
+  and HashFlow mining rate gauge.
 - Upgrades panel is populated at runtime from `UPGRADES`.
 - Prestige panel shows Blueprint Points, permanent bonus, lifetime cash,
   and the Reforge action.
@@ -119,6 +122,8 @@ repository.
   the current state.
 - Start screen visibility is driven by session state (`ready` or
   `ended`).
+- `hashRatePeak` decays during runs to keep HashFlow responsive while
+  smoothing spikes.
 
 ### Mining formula
 
@@ -199,6 +204,8 @@ repository.
   queries.
 - Button state is derived from session state and resource totals.
 - Start screen and game shell visibility are driven by session state.
+- Server Bay visuals update via `renderRigVisuals()` to reflect upgrade
+  levels, overclock intensity, and HashFlow rate.
 - The log panel is re-rendered each frame from `gameState.log`.
 
 ### Persistence
